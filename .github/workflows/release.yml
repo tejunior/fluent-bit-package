@@ -18,9 +18,12 @@ jobs:
     steps:
       - name: Setup environment
         run: |
-          sudo apt-get install --yes qemu binfmt-support qemu-user-static qemu-utils qemu-efi-aarch64 qemu-system-arm docker.io containerd runc
+          sudo apt-get update
+          sudo apt-get install   --yes qemu binfmt-support qemu-user-static qemu-utils qemu-efi-aarch64 qemu-system-arm docker.io containerd runc
           sudo systemctl unmask docker && sudo systemctl start docker
           docker run --rm --privileged --name qemu multiarch/qemu-user-static:register --reset
+
+      - uses: actions/checkout@v2
 
       - name: Retrieve linux version
         run: echo "FB_LINUX_VERSION=v$(awk -F, '/^linux,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
@@ -35,7 +38,7 @@ jobs:
           path: packaging
 
       - name: Build the distro artifacts
-        run: ./build.sh -v $FB_LINUX_VERSION -d ${{ env.distro }}
+        run: ./build.sh -v ${{ env.FB_LINUX_VERSION }} -d ${{ env.distro }}
         env:
           distro: ${{ matrix.distro }}
         working-directory: packaging
