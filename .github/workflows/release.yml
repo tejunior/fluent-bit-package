@@ -23,10 +23,8 @@ jobs:
           sudo systemctl unmask docker && sudo systemctl start docker
           docker run --rm --privileged --name qemu multiarch/qemu-user-static:register --reset
 
-      - uses: actions/checkout@v2
-
       - name: Retrieve linux version
-        run: echo "FB_LINUX_VERSION=v$(awk -F, '/^linux,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
+        run: echo "FB_LINUX_VERSION=1.7.4"  >> $GITHUB_ENV
 
       - name: Print version
         run: echo "FB_LINUX = ${{ env.FB_LINUX_VERSION }}"
@@ -48,7 +46,7 @@ jobs:
         with:
           name: artifacts
           path: |
-            packaging/packages/${{env.distro}}/$FB_LINUX_VERSION/**/*
+            packaging/packages/${{env.distro}}/${{ env.FB_LINUX_VERSION }}/**/*
         env:
           distro: ${{ matrix.distro }}
 
@@ -75,7 +73,7 @@ jobs:
       run: |
         echo "FB_LINUX_VERSION=v$(awk -F, '/^linux,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
         echo "FB_WIN_VERSION=$(awk -F, '/^windows,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
-        echo "NRFB_ARTIFACT_VERSION=$(awk -F, '/^artifact,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
+        echo "NRFB_ARTIFACT_VERSION=0.0.1"  >> $GITHUB_ENV
 
     - name: Print versions
       run: |
