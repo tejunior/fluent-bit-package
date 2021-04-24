@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  build-distro-packages:
+    name: build packages
+    strategy:
+      max-parallel: 48
+      fail-fast: true
+      matrix:
+        distro: [ amazonlinux/2 ]
+
+    runs-on: [ ubuntu-latest ] #self-hosted, Linux, X64, packet-builder]
+    steps:
+      - name: Setup environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install   --yes qemu binfmt-support qemu-user-static qemu-utils qemu-efi-aarch64 qemu-system-arm docker.io containerd runc
+          sudo systemctl unmask docker && sudo systemctl start docker
+          docker run --rm --privileged --name qemu multiarch/qemu-user-static:register --reset
+
+      - name: Retrieve linux version
+        run: echo "FB_LINUX_VERSION=1.7.4"  >> $GITHUB_ENV
+
+      - name: Print version
+        run: echo "FB_LINUX = ${{ env.FB_LINUX_VERSION }}"
+
+      - uses: actions/checkout@v2
+        with:
+          repository: fluent/fluent-bit-packaging
+          fetch-depth: 1
+          path: packaging
+
+      - name: Build the distro artifacts
+        run: ./build.sh -v ${{ env.FB_LINUX_VERSION }} -d ${{ env.distro }}
+        env:
+          distro: ${{ matrix.distro }}
+        working-directory: packaging
+
+      - name: Extract FB binary
+        run: |
+          pushd packaging/packages/${{env.distro}}/${{ env.FB_LINUX_VERSION }}/*/
+          ar x td-agent-bit*
+        env:
+          distro: ${{ matrix.distro }}
+
+      - name: Archive the release artifacts (packages)
+        uses: actions/upload-artifact@v2
+        with:
+          name: artifacts
+          path: |
+            packaging/packages/${{env.distro}}/${{ env.FB_LINUX_VERSION }}/**/data.tar.gz
+        env:
+          distro: ${{ matrix.distro }}
+
+  publish:
+
+    name: Publish artifact as assets
+    runs-on: ubuntu-16.04
+    needs: [build-distro-packages]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: ./
+
+    - name: Display structure of downloaded files
+      run: |
+            ls -R
+            pwd
+
+    - name: Retrieve versions
+      run: |
+        echo "FB_LINUX_VERSION=v$(awk -F, '/^linux,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
+        echo "FB_WIN_VERSION=$(awk -F, '/^windows,/ {print $2}' nr_fb_version)"  >> $GITHUB_ENV
+        echo "NRFB_ARTIFACT_VERSION=0.0.1"  >> $GITHUB_ENV
+
+    - name: Print versions
+      run: |
+        echo "FB_LINUX: ${{ env.FB_LINUX_VERSION }}"
+        echo "FB_WIN: ${{ env.FB_WIN_VERSION}}"
+        echo "NR ARTIFACT: ${{ env.NRFB_ARTIFACT_VERSION }}"
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.NRFB_ARTIFACT_VERSION }}
+        release_name: nrfb v${{ env.NRFB_ARTIFACT_VERSION }}
+        body: |
+          Included into this Release
+          - FluentBit Linux Version: ${{ env.FB_LINUX_VERSION }}
+          - FluentBit Windows Version: v${{ env.FB_WIN_VERSION}}
+        draft: false
+        prerelease: false
+
+    - name: Upload Linux amd64 Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/data.tar.gz
+        asset_name: fb-linux-arm.tar.gz
+        asset_content_type: application/gzip
