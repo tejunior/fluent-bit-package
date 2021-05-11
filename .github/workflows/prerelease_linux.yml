@@ -8,8 +8,8 @@ env:
 #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 #  GO_VERSION: '1.14.4'
 #  GPG_MAIL: 'infrastructure-eng@newrelic.com'
-  GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
-  GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
+  GPG_PASSPHRASE: ${{ secrets.TEO_OHAI_GPG_PASSPHRASE }}
+  GPG_PRIVATE_KEY_BASE64: ${{ secrets.TEO_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
 #  DOCKER_HUB_ID: ${{ secrets.OHAI_DOCKER_HUB_ID }}
 #  DOCKER_HUB_PASSWORD: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
 #  SCHEMA_BRANCH: "master"
